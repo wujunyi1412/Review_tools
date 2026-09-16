@@ -16,15 +16,16 @@ public sealed class MainViewModel : ObservableObject
     private readonly ImageScanner _scanner = new();
     private readonly ReviewStore _store = new();
     private readonly ExportService _exporter = new();
-    private string _resultFolder = "", _originalFolder = "", _extensions = ".jpg;.jpeg;.png;.bmp;.tif;.tiff";
+    private string _resultFolder = "", _originalFolder = "";
     private string _loadedResultFolder = "";
     private string _newDetectionTag = "", _status = "请选择结果文件夹";
     private ReviewItem? _selectedItem;
     private BitmapImage? _resultImage, _originalImage;
-    private bool _isBusy, _exportResult = true, _exportOriginal = true;
+    private bool _isBusy, _exportResult = true, _exportOriginal = true, _autoAdvance = true;
     private CancellationTokenSource? _saveDebounce;
 
     public ObservableCollection<ReviewItem> Items { get; } = [];
+    public ObservableCollection<FilterOption> ImageFormats { get; } = [];
     public ICollectionView ItemsView { get; }
     public ObservableCollection<string> DetectionTags { get; } = [];
     public ObservableCollection<FilterOption> DetectionFilters { get; } = [];
@@ -35,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand BrowseOriginalCommand { get; }
     public RelayCommand OpenCommand { get; }
     public RelayCommand AddDetectionTagCommand { get; }
+    public RelayCommand SelectDetectionTagCommand { get; }
     public RelayCommand PreviousCommand { get; }
     public RelayCommand NextCommand { get; }
     public RelayCommand ExportCommand { get; }
@@ -49,7 +51,6 @@ public sealed class MainViewModel : ObservableObject
             { Raise(nameof(HasOriginalFolder)); Raise(nameof(ViewerColumns)); }
         }
     }
-    public string Extensions { get => _extensions; set => Set(ref _extensions, value); }
     public string NewDetectionTag { get => _newDetectionTag; set => Set(ref _newDetectionTag, value); }
     public string Status { get => _status; set => Set(ref _status, value); }
     public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
@@ -57,6 +58,7 @@ public sealed class MainViewModel : ObservableObject
     public int ViewerColumns => HasOriginalFolder ? 2 : 1;
     public bool ExportResult { get => _exportResult; set => Set(ref _exportResult, value); }
     public bool ExportOriginal { get => _exportOriginal; set => Set(ref _exportOriginal, value); }
+    public bool AutoAdvance { get => _autoAdvance; set => Set(ref _autoAdvance, value); }
     public BitmapImage? ResultImage { get => _resultImage; private set => Set(ref _resultImage, value); }
     public BitmapImage? OriginalImage { get => _originalImage; private set => Set(ref _originalImage, value); }
     public ReviewItem? SelectedItem
@@ -73,15 +75,20 @@ public sealed class MainViewModel : ObservableObject
         BrowseOriginalCommand = new(_ => PickFolder(path => { OriginalFolder = path; Raise(nameof(HasOriginalFolder)); }));
         OpenCommand = new(async _ => await OpenAsync(), _ => !IsBusy);
         AddDetectionTagCommand = new(_ => AddTag(NewDetectionTag, DetectionTags, DetectionFilters, () => NewDetectionTag = ""));
+        SelectDetectionTagCommand = new(tag => SelectDetectionTag(tag as string));
         PreviousCommand = new(_ => Navigate(-1));
         NextCommand = new(_ => Navigate(1));
         ExportCommand = new(async _ => await ExportAsync());
+        foreach (var extension in new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".gif" })
+            ImageFormats.Add(new FilterOption { Name = extension, IsSelected = extension != ".gif" });
         SetTags(DefaultDetectionTags);
     }
 
     private async Task OpenAsync()
     {
         if (!Directory.Exists(ResultFolder)) { Status = "结果文件夹不存在。"; return; }
+        var selectedFormats = ImageFormats.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
+        if (selectedFormats.Length == 0) { Status = "请至少勾选一种图片格式。"; return; }
         IsBusy = true; Status = "正在递归扫描图片…";
         try
         {
@@ -93,14 +100,14 @@ public sealed class MainViewModel : ObservableObject
             var records = database.Items.ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
             var scanned = await _scanner.ScanAsync(targetRoot,
                 Directory.Exists(OriginalFolder) ? OriginalFolder : null,
-                Extensions.Split([';', ',', ' '], StringSplitOptions.RemoveEmptyEntries));
+                selectedFormats);
+            foreach (var oldItem in Items) oldItem.PropertyChanged -= ItemChanged;
             Items.Clear();
             foreach (var item in scanned)
             {
                 if (records.TryGetValue(item.RelativePath, out var record))
                 { item.DetectionTag = NormalizeTag(record.DetectionTag); }
-                item.PropertyChanged += ItemChanged;
-                Items.Add(item);
+                AddReviewItem(item);
             }
             ItemsView.Refresh();
             _loadedResultFolder = targetRoot;
@@ -117,6 +124,11 @@ public sealed class MainViewModel : ObservableObject
     private void SetTags(IEnumerable<string> detection)
     {
         ReplaceTags(DetectionTags, DetectionFilters, detection);
+    }
+    public void AddReviewItem(ReviewItem item)
+    {
+        item.PropertyChanged += ItemChanged;
+        Items.Add(item);
     }
     private static string NormalizeTag(string? tag) =>
         string.IsNullOrWhiteSpace(tag) || string.Equals(tag, "NULL", StringComparison.OrdinalIgnoreCase)
@@ -142,6 +154,28 @@ public sealed class MainViewModel : ObservableObject
         option.PropertyChanged += FilterChanged;
         filters.Insert(filters.Count > 0 ? filters.Count - 1 : 0, option);
         clear(); QueueSave(); UpdateStatistics();
+    }
+    private void SelectDetectionTag(string? tag)
+    {
+        var current = SelectedItem;
+        if (current is null || tag is null || !DetectionTags.Contains(tag)) return;
+        var before = ItemsView.Cast<ReviewItem>().ToList();
+        var index = before.IndexOf(current);
+        current.DetectionTag = tag;
+        if (!AutoAdvance)
+        {
+            if (!ItemsView.Contains(current)) SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
+            return;
+        }
+        if (index < 0) index = 0;
+        for (var step = 1; step <= before.Count; step++)
+        {
+            var candidate = before[(index + step) % before.Count];
+            if (!ItemsView.Contains(candidate)) continue;
+            SelectedItem = candidate;
+            return;
+        }
+        SelectedItem = null;
     }
     private void FilterChanged(object? sender, PropertyChangedEventArgs e)
     {

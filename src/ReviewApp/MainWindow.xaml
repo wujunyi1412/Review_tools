@@ -9,6 +9,44 @@
   <Window.Resources>
     <infra:BoolToVisibilityConverter x:Key="BoolVisibility"/>
     <infra:NullToVisibilityConverter x:Key="NullVisibility"/>
+    <infra:SameTagConverter x:Key="SameTag"/>
+    <Style x:Key="TagChoiceButton" TargetType="Button">
+      <Setter Property="Foreground" Value="#344054"/>
+      <Setter Property="Background" Value="#F5F8FC"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="Margin" Value="3"/>
+      <Setter Property="MinWidth" Value="88"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+        </Trigger>
+        <DataTrigger Value="True">
+          <DataTrigger.Binding>
+            <MultiBinding Converter="{StaticResource SameTag}">
+              <Binding Path="DataContext.SelectedItem.DetectionTag" RelativeSource="{RelativeSource AncestorType=Window}"/>
+              <Binding Path="."/>
+            </MultiBinding>
+          </DataTrigger.Binding>
+          <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+          <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+          <Setter Property="Foreground" Value="White"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
   </Window.Resources>
   <Window.InputBindings>
     <KeyBinding Key="Left" Command="{Binding PreviousCommand}"/>
@@ -49,8 +87,12 @@
           <TextBox Grid.Column="1" Text="{Binding ResultFolder, UpdateSourceTrigger=PropertyChanged}"/>
           <Button Grid.Column="2" Content="浏览..." Command="{Binding BrowseResultCommand}" MinWidth="76"/>
           <TextBlock Grid.Column="3" Text="图片格式" VerticalAlignment="Center" Margin="18,5,5,5" FontWeight="SemiBold"/>
-          <TextBox Grid.Column="4" Text="{Binding Extensions, UpdateSourceTrigger=PropertyChanged}"
-                   ToolTip="用分号、逗号或空格分隔"/>
+          <ItemsControl Grid.Column="4" ItemsSource="{Binding ImageFormats}" VerticalAlignment="Center" Margin="4,0">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate>
+              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="5,3"/>
+            </DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
           <Button Grid.Column="5" Grid.RowSpan="2" Content="打开文件夹" Command="{Binding OpenCommand}"
                   Style="{StaticResource PrimaryButton}" MinWidth="112" Margin="10,4,4,4"/>
 
@@ -143,8 +185,20 @@
         <StackPanel>
           <GroupBox Header="当前图片标签">
             <StackPanel>
-              <TextBlock Text="检出标签" Margin="4,2,4,1" Foreground="{StaticResource MutedTextBrush}"/>
-              <ComboBox ItemsSource="{Binding DetectionTags}" SelectedItem="{Binding SelectedItem.DetectionTag}"/>
+              <StackPanel Orientation="Horizontal" Margin="4,2,4,8">
+                <TextBlock Text="当前：" Foreground="{StaticResource MutedTextBrush}"/>
+                <TextBlock Text="{Binding SelectedItem.DetectionTag, TargetNullValue=未选择图片}"
+                           Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold"/>
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding DetectionTags}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <Button Content="{Binding}" Style="{StaticResource TagChoiceButton}"
+                          Command="{Binding DataContext.SelectDetectionTagCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                          CommandParameter="{Binding}"/>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <CheckBox Content="标注后自动跳转到下一张" IsChecked="{Binding AutoAdvance}" Margin="5,10,5,2"/>
             </StackPanel>
           </GroupBox>
           <GroupBox Header="新增标签">

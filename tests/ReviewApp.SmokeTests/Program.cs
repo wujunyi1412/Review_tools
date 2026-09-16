@@ -1,5 +1,6 @@
 using ImageReviewTool.Models;
 using ImageReviewTool.Services;
+using ImageReviewTool.ViewModels;
 
 var sandbox = Path.Combine(Path.GetTempPath(), "ImageReviewToolTests", Guid.NewGuid().ToString("N"));
 var results = Path.Combine(sandbox, "results");
@@ -42,6 +43,33 @@ try
     Check(File.Exists(Path.Combine(exports, "正确检出", "result", "line-a", "one.png")), "result export path");
     Check(File.Exists(Path.Combine(exports, "正确检出", "original", "line-a", "one.png")), "original export path");
 
+    RunSta(() =>
+    {
+        var viewModel = new MainViewModel();
+        Check(viewModel.AutoAdvance, "automatic advance enabled by default");
+        Check(viewModel.ImageFormats.Count(x => x.IsSelected) == 6, "image format checkbox defaults");
+        var first = new ReviewItem { RelativePath = "first.png", ResultPath = Path.Combine(sandbox, "missing-first.png") };
+        var second = new ReviewItem { RelativePath = "second.png", ResultPath = Path.Combine(sandbox, "missing-second.png") };
+        viewModel.AddReviewItem(first);
+        viewModel.AddReviewItem(second);
+        viewModel.SelectedItem = first;
+        viewModel.SelectDetectionTagCommand.Execute("漏检");
+        Check(first.DetectionTag == "漏检" && ReferenceEquals(viewModel.SelectedItem, second),
+            "one-click tagging advances to next image");
+
+        viewModel.AutoAdvance = false;
+        viewModel.SelectDetectionTagCommand.Execute("误检");
+        Check(second.DetectionTag == "误检" && ReferenceEquals(viewModel.SelectedItem, second),
+            "automatic advance can be disabled");
+
+        viewModel.AutoAdvance = true;
+        viewModel.DetectionFilters.Single(x => x.Name == "误检").IsSelected = false;
+        viewModel.SelectedItem = first;
+        viewModel.SelectDetectionTagCommand.Execute("误检");
+        Check(ReferenceEquals(viewModel.SelectedItem, null),
+            "automatic advance does not select images excluded by filter");
+    });
+
     Console.WriteLine("Smoke tests passed: scan, match, persist, export.");
     return 0;
 }
@@ -59,4 +87,18 @@ static void Touch(string path)
 static void Check(bool condition, string name)
 {
     if (!condition) throw new InvalidOperationException("Failed: " + name);
+}
+
+static void RunSta(Action test)
+{
+    Exception? failure = null;
+    var thread = new Thread(() =>
+    {
+        try { test(); }
+        catch (Exception ex) { failure = ex; }
+    });
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    if (failure is not null) throw failure;
 }
