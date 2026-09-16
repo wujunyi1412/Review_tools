@@ -80,8 +80,8 @@ public sealed class MainViewModel : ObservableObject
         PreviousCommand = new(_ => Navigate(-1));
         NextCommand = new(_ => Navigate(1));
         ExportCommand = new(async _ => await ExportAsync());
-        foreach (var extension in new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".gif" })
-            ImageFormats.Add(new FilterOption { Name = extension, IsSelected = extension != ".gif" });
+        foreach (var extension in new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" })
+            ImageFormats.Add(new FilterOption { Name = extension });
         SetTags(DefaultDetectionTags);
     }
 

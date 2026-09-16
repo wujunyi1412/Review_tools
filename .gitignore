@@ -1,3 +1,4 @@
+# Build and release outputs
 build*/
 artifacts/
 **/bin/
@@ -5,3 +6,12 @@ artifacts/
 .vs/
 *.user
 *.suo
+
+# Local package cache and generated icons
+**/.nuget/
+src/ReviewApp/Assets/ReviewTool.ico
+src/ReviewApp/Assets/ReviewTool.png
+
+# Review data written beside input images
+.review-data.json
+.review-data.json.tmp

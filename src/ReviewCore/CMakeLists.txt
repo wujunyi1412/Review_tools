@@ -1,4 +1,7 @@
 add_library(ReviewCore SHARED ReviewCore.cpp)
+if(MSVC)
+  set_property(TARGET ReviewCore PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 target_compile_features(ReviewCore PRIVATE cxx_std_17)
 target_compile_definitions(ReviewCore PRIVATE REVIEWCORE_EXPORTS)
 

@@ -4,7 +4,11 @@
 
 ## 构建
 
-要求：Windows、.NET 8 SDK、CMake 3.20+、Visual Studio 2022 C++ 工具链。
+开发机要求：Windows、.NET 8 SDK、CMake 3.20+、Visual Studio 2022 C++ 工具链。
+
+双击 [build.bat](build.bat) 一键编译，程序位于 `artifacts/app/ImageReviewTool.exe`。
+
+双击 [package.bat](package.bat) 一键发布，输出位于 `artifacts/releases/`。发布脚本生成 Windows x64 自包含版本及 ZIP；目标电脑无需预装 .NET。C++ 核心使用静态 MSVC 运行库。首次发布可能需要联网下载 .NET 运行时包。每次发布会创建带时间戳的新目录，不覆盖旧包。
 
 ```powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64

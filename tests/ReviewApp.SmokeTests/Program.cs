@@ -48,6 +48,7 @@ try
         var viewModel = new MainViewModel();
         Check(viewModel.AutoAdvance, "automatic advance enabled by default");
         Check(viewModel.ImageFormats.Count(x => x.IsSelected) == 6, "image format checkbox defaults");
+        Check(viewModel.ImageFormats.All(x => x.Name != ".gif"), "GIF is absent from image format options");
         var first = new ReviewItem { RelativePath = "first.png", ResultPath = Path.Combine(sandbox, "missing-first.png") };
         var second = new ReviewItem { RelativePath = "second.png", ResultPath = Path.Combine(sandbox, "missing-second.png") };
         viewModel.AddReviewItem(first);
@@ -78,6 +79,12 @@ try
         viewModel.SelectDetectionTagCommand.Execute("误检");
         Check(ReferenceEquals(viewModel.SelectedItem, null),
             "automatic advance does not select images excluded by filter");
+
+        var app = new ImageReviewTool.App();
+        app.InitializeComponent();
+        var window = new ImageReviewTool.MainWindow();
+        Check(window.Title == "图片复判工具", "main window XAML and icon load at startup");
+        window.Close();
     });
 
     Console.WriteLine("Smoke tests passed: scan, match, persist, export.");

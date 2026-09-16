@@ -16,6 +16,6 @@ internal static class NativeImageFormats
     }
 
     private static bool Managed(string extension) => new[]
-        { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".gif" }
+        { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" }
         .Contains(extension.ToLowerInvariant());
 }

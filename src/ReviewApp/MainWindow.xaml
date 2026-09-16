@@ -5,7 +5,7 @@
         xmlns:infra="clr-namespace:ImageReviewTool.Infrastructure"
         Title="图片复判工具" Width="1500" Height="900" MinWidth="1050" MinHeight="680"
         WindowState="Maximized" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
-        UseLayoutRounding="True" SnapsToDevicePixels="True">
+        Icon="Assets/ReviewTool.png" UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Window.Resources>
     <infra:BoolToVisibilityConverter x:Key="BoolVisibility"/>
     <infra:NullToVisibilityConverter x:Key="NullVisibility"/>
@@ -126,7 +126,7 @@
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
         </GroupBox>
-        <TextBlock Grid.Row="1" Text="{Binding ImageCountSummary}" FontSize="14" FontWeight="SemiBold" Margin="10,10,5,7"/>
+        <TextBlock Grid.Row="1" Text="{Binding ImageCountSummary}" FontSize="12" FontWeight="SemiBold" Margin="10,10,5,7"/>
         <ListBox Grid.Row="2" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem}"
                  Margin="6" ScrollViewer.HorizontalScrollBarVisibility="Auto">
           <ListBox.ItemTemplate><DataTemplate>

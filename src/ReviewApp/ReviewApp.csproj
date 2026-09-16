@@ -7,5 +7,13 @@
     <Nullable>enable</Nullable>
     <AssemblyName>ImageReviewTool</AssemblyName>
     <RootNamespace>ImageReviewTool</RootNamespace>
+    <ApplicationIcon>Assets\ReviewTool.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\ReviewTool.ico" />
+    <Resource Include="Assets\ReviewTool.png" />
+  </ItemGroup>
+  <Target Name="GenerateAppIcon" BeforeTargets="PrepareForBuild">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\Generate-Icon.ps1&quot;" />
+  </Target>
 </Project>

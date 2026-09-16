@@ -18,7 +18,7 @@ REVIEW_API int review_core_is_supported_extension(const char* extension) {
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (!value.empty() && value.front() != '.') value.insert(value.begin(), '.');
     static const std::unordered_set<std::string> supported{
-        ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".gif"
+        ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"
     };
     return supported.count(value) ? 1 : 0;
 }
