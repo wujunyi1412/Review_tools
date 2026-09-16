@@ -20,20 +20,27 @@ try
     Check(items.All(x => x.OriginalPath is not null), "relative and unique-filename original matching");
 
     items[0].DetectionTag = "正确检出";
-    items[0].ResultTag = "OK";
     var database = new ReviewDatabase
     {
-        Items = items.Select(x => new ReviewRecord(x.RelativePath, x.DetectionTag, x.ResultTag)).ToList()
+        Items = items.Select(x => new ReviewRecord(x.RelativePath, x.DetectionTag)).ToList()
     };
     var store = new ReviewStore();
     await store.SaveAsync(results, database);
     var restored = await store.LoadAsync(results);
     Check(restored.Items.Count == 2 && restored.Items[0].DetectionTag == "正确检出", "review persistence");
 
+    var legacyRoot = Path.Combine(sandbox, "legacy");
+    Directory.CreateDirectory(legacyRoot);
+    File.WriteAllText(Path.Combine(legacyRoot, ".review-data.json"),
+        """{"DetectionTags":["自定义"],"ResultTags":["OK"],"Items":[{"RelativePath":"old.png","DetectionTag":"自定义","ResultTag":"OK"}]}""");
+    var legacy = await store.LoadAsync(legacyRoot);
+    Check(legacy.DetectionTags.Single() == "自定义" && legacy.Items.Single().DetectionTag == "自定义",
+        "legacy two-tag data compatibility");
+
     var exported = await new ExportService().ExportAsync([items[0]], exports, true, true);
     Check(exported == 2, "export count");
-    Check(File.Exists(Path.Combine(exports, "正确检出", "OK", "result", "line-a", "one.png")), "result export path");
-    Check(File.Exists(Path.Combine(exports, "正确检出", "OK", "original", "line-a", "one.png")), "original export path");
+    Check(File.Exists(Path.Combine(exports, "正确检出", "result", "line-a", "one.png")), "result export path");
+    Check(File.Exists(Path.Combine(exports, "正确检出", "original", "line-a", "one.png")), "original export path");
 
     Console.WriteLine("Smoke tests passed: scan, match, persist, export.");
     return 0;

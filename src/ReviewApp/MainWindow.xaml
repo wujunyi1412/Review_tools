@@ -74,8 +74,7 @@
 
       <Grid Grid.Column="0">
         <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <GroupBox Header="检出标签过滤">
           <ItemsControl ItemsSource="{Binding DetectionFilters}">
@@ -85,16 +84,8 @@
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
         </GroupBox>
-        <GroupBox Grid.Row="1" Header="结果标签过滤">
-          <ItemsControl ItemsSource="{Binding ResultFilters}">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate><DataTemplate>
-              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="6,4"/>
-            </DataTemplate></ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </GroupBox>
-        <TextBlock Grid.Row="2" Text="图片列表" FontSize="14" FontWeight="SemiBold" Margin="10,10,5,7"/>
-        <ListBox Grid.Row="3" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem}"
+        <TextBlock Grid.Row="1" Text="图片列表" FontSize="14" FontWeight="SemiBold" Margin="10,10,5,7"/>
+        <ListBox Grid.Row="2" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem}"
                  Margin="6" ScrollViewer.HorizontalScrollBarVisibility="Auto">
           <ListBox.ItemTemplate><DataTemplate>
             <Grid>
@@ -154,18 +145,13 @@
             <StackPanel>
               <TextBlock Text="检出标签" Margin="4,2,4,1" Foreground="{StaticResource MutedTextBrush}"/>
               <ComboBox ItemsSource="{Binding DetectionTags}" SelectedItem="{Binding SelectedItem.DetectionTag}"/>
-              <TextBlock Text="结果标签" Margin="4,10,4,1" Foreground="{StaticResource MutedTextBrush}"/>
-              <ComboBox ItemsSource="{Binding ResultTags}" SelectedItem="{Binding SelectedItem.ResultTag}"/>
             </StackPanel>
           </GroupBox>
           <GroupBox Header="新增标签">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
               <TextBox Text="{Binding NewDetectionTag, UpdateSourceTrigger=PropertyChanged}" ToolTip="新检出标签"/>
               <Button Grid.Column="1" Content="添加检出" Command="{Binding AddDetectionTagCommand}"/>
-              <TextBox Grid.Row="1" Text="{Binding NewResultTag, UpdateSourceTrigger=PropertyChanged}" ToolTip="新结果标签"/>
-              <Button Grid.Row="1" Grid.Column="1" Content="添加结果" Command="{Binding AddResultTagCommand}"/>
             </Grid>
           </GroupBox>
           <GroupBox Header="实时统计">

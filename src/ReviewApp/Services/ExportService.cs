@@ -19,7 +19,7 @@ public sealed class ExportService
     private static void Copy(string source, string kind, ReviewItem item, string root)
     {
         var relativeDirectory = Path.GetDirectoryName(item.RelativePath.Replace('/', Path.DirectorySeparatorChar)) ?? "";
-        var destinationDirectory = Path.Combine(root, Safe(item.DetectionTag), Safe(item.ResultTag), kind, relativeDirectory);
+        var destinationDirectory = Path.Combine(root, Safe(item.DetectionTag), kind, relativeDirectory);
         Directory.CreateDirectory(destinationDirectory);
         File.Copy(source, Path.Combine(destinationDirectory, Path.GetFileName(source)), true);
     }

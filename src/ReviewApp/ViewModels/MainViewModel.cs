@@ -13,13 +13,12 @@ namespace ImageReviewTool.ViewModels;
 public sealed class MainViewModel : ObservableObject
 {
     private static readonly string[] DefaultDetectionTags = ["正确检出", "漏检", "误检", "部分漏检", "部分误检", "待定"];
-    private static readonly string[] DefaultResultTags = ["OK", "NG", "待定"];
     private readonly ImageScanner _scanner = new();
     private readonly ReviewStore _store = new();
     private readonly ExportService _exporter = new();
     private string _resultFolder = "", _originalFolder = "", _extensions = ".jpg;.jpeg;.png;.bmp;.tif;.tiff";
     private string _loadedResultFolder = "";
-    private string _newDetectionTag = "", _newResultTag = "", _status = "请选择结果文件夹";
+    private string _newDetectionTag = "", _status = "请选择结果文件夹";
     private ReviewItem? _selectedItem;
     private BitmapImage? _resultImage, _originalImage;
     private bool _isBusy, _exportResult = true, _exportOriginal = true;
@@ -28,9 +27,7 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<ReviewItem> Items { get; } = [];
     public ICollectionView ItemsView { get; }
     public ObservableCollection<string> DetectionTags { get; } = [];
-    public ObservableCollection<string> ResultTags { get; } = [];
     public ObservableCollection<FilterOption> DetectionFilters { get; } = [];
-    public ObservableCollection<FilterOption> ResultFilters { get; } = [];
     public ObservableCollection<string> Statistics { get; } = [];
     public ViewportState Viewport { get; } = new();
 
@@ -38,7 +35,6 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand BrowseOriginalCommand { get; }
     public RelayCommand OpenCommand { get; }
     public RelayCommand AddDetectionTagCommand { get; }
-    public RelayCommand AddResultTagCommand { get; }
     public RelayCommand PreviousCommand { get; }
     public RelayCommand NextCommand { get; }
     public RelayCommand ExportCommand { get; }
@@ -55,7 +51,6 @@ public sealed class MainViewModel : ObservableObject
     }
     public string Extensions { get => _extensions; set => Set(ref _extensions, value); }
     public string NewDetectionTag { get => _newDetectionTag; set => Set(ref _newDetectionTag, value); }
-    public string NewResultTag { get => _newResultTag; set => Set(ref _newResultTag, value); }
     public string Status { get => _status; set => Set(ref _status, value); }
     public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
     public bool HasOriginalFolder => Directory.Exists(OriginalFolder);
@@ -78,11 +73,10 @@ public sealed class MainViewModel : ObservableObject
         BrowseOriginalCommand = new(_ => PickFolder(path => { OriginalFolder = path; Raise(nameof(HasOriginalFolder)); }));
         OpenCommand = new(async _ => await OpenAsync(), _ => !IsBusy);
         AddDetectionTagCommand = new(_ => AddTag(NewDetectionTag, DetectionTags, DetectionFilters, () => NewDetectionTag = ""));
-        AddResultTagCommand = new(_ => AddTag(NewResultTag, ResultTags, ResultFilters, () => NewResultTag = ""));
         PreviousCommand = new(_ => Navigate(-1));
         NextCommand = new(_ => Navigate(1));
         ExportCommand = new(async _ => await ExportAsync());
-        SetTags(DefaultDetectionTags, DefaultResultTags);
+        SetTags(DefaultDetectionTags);
     }
 
     private async Task OpenAsync()
@@ -95,8 +89,7 @@ public sealed class MainViewModel : ObservableObject
             if (!string.IsNullOrEmpty(_loadedResultFolder)) await SaveAsync();
             var targetRoot = ResultFolder;
             var database = await _store.LoadAsync(targetRoot);
-            SetTags(DefaultDetectionTags.Concat(database.DetectionTags.Select(NormalizeTag)),
-                DefaultResultTags.Concat(database.ResultTags.Select(NormalizeTag)));
+            SetTags(DefaultDetectionTags.Concat(database.DetectionTags.Select(NormalizeTag)));
             var records = database.Items.ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
             var scanned = await _scanner.ScanAsync(targetRoot,
                 Directory.Exists(OriginalFolder) ? OriginalFolder : null,
@@ -105,7 +98,7 @@ public sealed class MainViewModel : ObservableObject
             foreach (var item in scanned)
             {
                 if (records.TryGetValue(item.RelativePath, out var record))
-                { item.DetectionTag = NormalizeTag(record.DetectionTag); item.ResultTag = NormalizeTag(record.ResultTag); }
+                { item.DetectionTag = NormalizeTag(record.DetectionTag); }
                 item.PropertyChanged += ItemChanged;
                 Items.Add(item);
             }
@@ -121,10 +114,9 @@ public sealed class MainViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-    private void SetTags(IEnumerable<string> detection, IEnumerable<string> result)
+    private void SetTags(IEnumerable<string> detection)
     {
         ReplaceTags(DetectionTags, DetectionFilters, detection);
-        ReplaceTags(ResultTags, ResultFilters, result);
     }
     private static string NormalizeTag(string? tag) =>
         string.IsNullOrWhiteSpace(tag) || string.Equals(tag, "NULL", StringComparison.OrdinalIgnoreCase)
@@ -160,12 +152,11 @@ public sealed class MainViewModel : ObservableObject
     private bool FilterItem(object value)
     {
         var item = (ReviewItem)value;
-        return DetectionFilters.Any(x => x.IsSelected && x.Name.Equals(item.DetectionTag, StringComparison.OrdinalIgnoreCase))
-            && ResultFilters.Any(x => x.IsSelected && x.Name.Equals(item.ResultTag, StringComparison.OrdinalIgnoreCase));
+        return DetectionFilters.Any(x => x.IsSelected && x.Name.Equals(item.DetectionTag, StringComparison.OrdinalIgnoreCase));
     }
     private void ItemChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ReviewItem.DetectionTag) or nameof(ReviewItem.ResultTag))
+        if (e.PropertyName is nameof(ReviewItem.DetectionTag))
         { ItemsView.Refresh(); UpdateStatistics(); QueueSave(); }
     }
     private void UpdateStatistics()
@@ -173,8 +164,6 @@ public sealed class MainViewModel : ObservableObject
         Statistics.Clear();
         Statistics.Add($"全部：{Items.Count}    当前过滤：{ItemsView.Cast<object>().Count()}");
         foreach (var group in Items.GroupBy(x => x.DetectionTag).OrderBy(x => x.Key)) Statistics.Add($"{group.Key}：{group.Count()}");
-        Statistics.Add("────────");
-        foreach (var group in Items.GroupBy(x => x.ResultTag).OrderBy(x => x.Key)) Statistics.Add($"{group.Key}：{group.Count()}");
     }
     private void Navigate(int delta)
     {
@@ -212,8 +201,7 @@ public sealed class MainViewModel : ObservableObject
     private Task SaveAsync() => _store.SaveAsync(_loadedResultFolder, new ReviewDatabase
     {
         DetectionTags = DetectionTags.Except(DefaultDetectionTags, StringComparer.OrdinalIgnoreCase).ToList(),
-        ResultTags = ResultTags.Except(DefaultResultTags, StringComparer.OrdinalIgnoreCase).ToList(),
-        Items = Items.Select(x => new ReviewRecord(x.RelativePath, x.DetectionTag, x.ResultTag)).ToList()
+        Items = Items.Select(x => new ReviewRecord(x.RelativePath, x.DetectionTag)).ToList()
     });
     private async Task ExportAsync()
     {
