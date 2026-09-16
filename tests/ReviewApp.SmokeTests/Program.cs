@@ -38,10 +38,26 @@ try
     Check(legacy.DetectionTags.Single() == "自定义" && legacy.Items.Single().DetectionTag == "自定义",
         "legacy two-tag data compatibility");
 
-    var exported = await new ExportService().ExportAsync([items[0]], exports, true, true);
+    var exportProgress = new RecordingProgress();
+    var exported = await new ExportService().ExportAsync([items[0]], exports, true, true, exportProgress);
     Check(exported == 2, "export count");
+    Check(exportProgress.Updates.First() == new ExportProgress(0, 2, "")
+          && exportProgress.Updates.Last().Completed == 2,
+        "export reports file-level progress");
     Check(File.Exists(Path.Combine(exports, "正确检出", "result", "line-a", "one.png")), "result export path");
     Check(File.Exists(Path.Combine(exports, "正确检出", "original", "line-a", "one.png")), "original export path");
+
+    var missing = new ReviewItem { RelativePath = "missing.png", ResultPath = Path.Combine(sandbox, "missing.png") };
+    try
+    {
+        await new ExportService().ExportAsync([items[0], missing], Path.Combine(sandbox, "partial-export"), true, false);
+        throw new InvalidOperationException("Expected export failure was not reported.");
+    }
+    catch (ExportFailedException ex)
+    {
+        Check(ex.Completed == 1 && ex.Total == 2 && ex.SourcePath == missing.ResultPath,
+            "export failure reports partial progress and failed file");
+    }
 
     RunSta(() =>
     {
@@ -131,4 +147,10 @@ static void RunSta(Action test)
     thread.Start();
     thread.Join();
     if (failure is not null) throw failure;
+}
+
+sealed class RecordingProgress : IProgress<ExportProgress>
+{
+    public List<ExportProgress> Updates { get; } = [];
+    public void Report(ExportProgress value) => Updates.Add(value);
 }

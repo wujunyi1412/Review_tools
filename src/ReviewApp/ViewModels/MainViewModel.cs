@@ -22,6 +22,10 @@ public sealed class MainViewModel : ObservableObject
     private ReviewItem? _selectedItem;
     private BitmapImage? _resultImage, _originalImage;
     private bool _isBusy, _exportResult = true, _exportOriginal = true, _autoAdvance = true;
+    private bool _isExporting;
+    private bool _showExportProgress;
+    private double _exportProgressPercent;
+    private string _exportProgressText = "";
     private bool _updatingTags;
     private CancellationTokenSource? _saveDebounce;
 
@@ -78,6 +82,10 @@ public sealed class MainViewModel : ObservableObject
     }
     public bool ExportResult { get => _exportResult; set => Set(ref _exportResult, value); }
     public bool ExportOriginal { get => _exportOriginal; set => Set(ref _exportOriginal, value); }
+    public bool IsExporting { get => _isExporting; private set => Set(ref _isExporting, value); }
+    public bool ShowExportProgress { get => _showExportProgress; private set => Set(ref _showExportProgress, value); }
+    public double ExportProgressPercent { get => _exportProgressPercent; private set => Set(ref _exportProgressPercent, value); }
+    public string ExportProgressText { get => _exportProgressText; private set => Set(ref _exportProgressText, value); }
     public bool AutoAdvance { get => _autoAdvance; set => Set(ref _autoAdvance, value); }
     public BitmapImage? ResultImage { get => _resultImage; private set => Set(ref _resultImage, value); }
     public BitmapImage? OriginalImage { get => _originalImage; private set => Set(ref _originalImage, value); }
@@ -335,17 +343,61 @@ public sealed class MainViewModel : ObservableObject
             MessageBox.Show(Status, "无法导出", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (!ExportResult && !ExportOriginal) { Status = "请至少选择导出结果图或原图。"; return; }
+        if (!ExportResult && !ExportOriginal)
+        {
+            Status = "请至少选择导出结果图或原图。";
+            MessageBox.Show(Status, "无法导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (ExportOriginal && !ExportResult && selected.All(x => x.OriginalPath is null))
+        {
+            Status = "当前过滤结果中没有匹配的原图。";
+            MessageBox.Show(Status, "无法导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         var dialog = new OpenFolderDialog { Title = "选择导出文件夹", Multiselect = false };
         if (dialog.ShowDialog() != true) return;
         IsBusy = true;
+        IsExporting = true;
+        ShowExportProgress = true;
+        ExportProgressPercent = 0;
+        ExportProgressText = "准备导出…";
+        Status = "正在导出图片…";
+        var progress = new Progress<ExportProgress>(update =>
+        {
+            if (!IsExporting) return;
+            ExportProgressPercent = update.Total == 0 ? 0 : 100.0 * update.Completed / update.Total;
+            ExportProgressText = $"已完成 {update.Completed} / {update.Total} 个文件";
+            if (update.FileName.Length > 0)
+                Status = $"正在导出 {update.Completed}/{update.Total}：{update.FileName}";
+        });
         try
         {
-            var count = await _exporter.ExportAsync(selected, dialog.FolderName, ExportResult, ExportOriginal);
+            var count = await _exporter.ExportAsync(selected, dialog.FolderName, ExportResult, ExportOriginal, progress);
+            IsExporting = false;
+            ExportProgressPercent = 100;
+            ExportProgressText = $"导出完成 · {count} / {count} 个文件";
             Status = $"导出完成：{count} 个文件 → {dialog.FolderName}";
+            MessageBox.Show($"成功导出 {count} 个文件。\n保存位置：{dialog.FolderName}",
+                "导出完成", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch (Exception ex) { Status = "导出失败：" + ex.Message; }
-        finally { IsBusy = false; }
+        catch (ExportFailedException ex)
+        {
+            IsExporting = false;
+            ExportProgressPercent = ex.Total == 0 ? 0 : 100.0 * ex.Completed / ex.Total;
+            Status = $"导出失败：已完成 {ex.Completed}/{ex.Total} 个文件。";
+            ExportProgressText = $"导出失败 · 已完成 {ex.Completed} / {ex.Total} 个文件";
+            MessageBox.Show($"{Status}\n失败文件：{ex.SourcePath}\n原因：{ex.InnerException?.Message}",
+                "导出失败", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception ex)
+        {
+            IsExporting = false;
+            ExportProgressText = "导出失败";
+            Status = "导出失败：" + ex.Message;
+            MessageBox.Show(Status, "导出失败", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { IsBusy = false; IsExporting = false; }
     }
     private static void PickFolder(Action<string> set)
     {
