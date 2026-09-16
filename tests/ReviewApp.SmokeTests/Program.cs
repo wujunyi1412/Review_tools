@@ -113,6 +113,10 @@ try
         app.InitializeComponent();
         var window = new ImageReviewTool.MainWindow();
         Check(window.Title == "图片复判工具 v1.0.0", "window title shows version beside system icon");
+        window.WindowState = System.Windows.WindowState.Minimized;
+        window.ShowInTaskbar = false;
+        window.Show();
+        window.UpdateLayout();
         window.Close();
     });
 
