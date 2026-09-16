@@ -56,6 +56,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
     public bool HasOriginalFolder => Directory.Exists(OriginalFolder);
     public int ViewerColumns => HasOriginalFolder ? 2 : 1;
+    public string ImageCountSummary => $"图片列表 · 当前 {ItemsView.Cast<object>().Count()} / 全部 {Items.Count}";
     public bool ExportResult { get => _exportResult; set => Set(ref _exportResult, value); }
     public bool ExportOriginal { get => _exportOriginal; set => Set(ref _exportOriginal, value); }
     public bool AutoAdvance { get => _autoAdvance; set => Set(ref _autoAdvance, value); }
@@ -179,9 +180,13 @@ public sealed class MainViewModel : ObservableObject
     }
     private void FilterChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName != nameof(FilterOption.IsSelected)) return;
+        var previouslySelected = SelectedItem;
         ItemsView.Refresh();
-        if (SelectedItem is not null && !ItemsView.Contains(SelectedItem)) SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
+        if (previouslySelected is null || !ItemsView.Contains(previouslySelected))
+            SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
         UpdateStatistics();
+        Status = $"过滤已更新：当前显示 {ItemsView.Cast<object>().Count()} / {Items.Count} 张图片";
     }
     private bool FilterItem(object value)
     {
@@ -195,8 +200,10 @@ public sealed class MainViewModel : ObservableObject
     }
     private void UpdateStatistics()
     {
+        var visibleCount = ItemsView.Cast<object>().Count();
+        Raise(nameof(ImageCountSummary));
         Statistics.Clear();
-        Statistics.Add($"全部：{Items.Count}    当前过滤：{ItemsView.Cast<object>().Count()}");
+        Statistics.Add($"全部：{Items.Count}    当前过滤：{visibleCount}");
         foreach (var group in Items.GroupBy(x => x.DetectionTag).OrderBy(x => x.Key)) Statistics.Add($"{group.Key}：{group.Count()}");
     }
     private void Navigate(int delta)

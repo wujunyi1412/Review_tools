@@ -64,6 +64,16 @@ try
 
         viewModel.AutoAdvance = true;
         viewModel.DetectionFilters.Single(x => x.Name == "误检").IsSelected = false;
+        Check(viewModel.ItemsView.Cast<ReviewItem>().SequenceEqual([first])
+              && ReferenceEquals(viewModel.SelectedItem, first)
+              && viewModel.ImageCountSummary.Contains("当前 1 / 全部 2"),
+            "filter checkbox immediately updates list, selection and count");
+        viewModel.DetectionFilters.Single(x => x.Name == "漏检").IsSelected = false;
+        Check(!viewModel.ItemsView.Cast<ReviewItem>().Any() && viewModel.SelectedItem is null,
+            "unchecking all matching labels clears the image view");
+        viewModel.DetectionFilters.Single(x => x.Name == "漏检").IsSelected = true;
+        Check(ReferenceEquals(viewModel.SelectedItem, first),
+            "rechecking a label immediately restores a visible image");
         viewModel.SelectedItem = first;
         viewModel.SelectDetectionTagCommand.Execute("误检");
         Check(ReferenceEquals(viewModel.SelectedItem, null),
