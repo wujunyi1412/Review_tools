@@ -4,8 +4,8 @@ namespace ImageReviewTool.Models;
 
 public sealed class ReviewItem : ObservableObject
 {
-    private string _detectionTag = "NULL";
-    private string _resultTag = "NULL";
+    private string _detectionTag = "待定";
+    private string _resultTag = "待定";
     public required string RelativePath { get; init; }
     public required string ResultPath { get; init; }
     public string? OriginalPath { get; init; }

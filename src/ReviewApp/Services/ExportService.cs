@@ -28,6 +28,6 @@ public sealed class ExportService
     {
         var invalid = Path.GetInvalidFileNameChars();
         var result = new string(value.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
-        return string.IsNullOrEmpty(result) ? "NULL" : result;
+        return string.IsNullOrEmpty(result) ? "待定" : result;
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
+using System.Windows;
 using ImageReviewTool.Infrastructure;
 using ImageReviewTool.Models;
 using ImageReviewTool.Services;
@@ -11,8 +12,8 @@ namespace ImageReviewTool.ViewModels;
 
 public sealed class MainViewModel : ObservableObject
 {
-    private static readonly string[] DefaultDetectionTags = ["正确检出", "漏检", "误检", "部分漏检", "部分误检", "NULL"];
-    private static readonly string[] DefaultResultTags = ["OK", "NG", "NULL"];
+    private static readonly string[] DefaultDetectionTags = ["正确检出", "漏检", "误检", "部分漏检", "部分误检", "待定"];
+    private static readonly string[] DefaultResultTags = ["OK", "NG", "待定"];
     private readonly ImageScanner _scanner = new();
     private readonly ReviewStore _store = new();
     private readonly ExportService _exporter = new();
@@ -80,7 +81,7 @@ public sealed class MainViewModel : ObservableObject
         AddResultTagCommand = new(_ => AddTag(NewResultTag, ResultTags, ResultFilters, () => NewResultTag = ""));
         PreviousCommand = new(_ => Navigate(-1));
         NextCommand = new(_ => Navigate(1));
-        ExportCommand = new(async _ => await ExportAsync(), _ => Items.Count > 0 && !IsBusy);
+        ExportCommand = new(async _ => await ExportAsync());
         SetTags(DefaultDetectionTags, DefaultResultTags);
     }
 
@@ -94,7 +95,8 @@ public sealed class MainViewModel : ObservableObject
             if (!string.IsNullOrEmpty(_loadedResultFolder)) await SaveAsync();
             var targetRoot = ResultFolder;
             var database = await _store.LoadAsync(targetRoot);
-            SetTags(DefaultDetectionTags.Concat(database.DetectionTags), DefaultResultTags.Concat(database.ResultTags));
+            SetTags(DefaultDetectionTags.Concat(database.DetectionTags.Select(NormalizeTag)),
+                DefaultResultTags.Concat(database.ResultTags.Select(NormalizeTag)));
             var records = database.Items.ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
             var scanned = await _scanner.ScanAsync(targetRoot,
                 Directory.Exists(OriginalFolder) ? OriginalFolder : null,
@@ -103,7 +105,7 @@ public sealed class MainViewModel : ObservableObject
             foreach (var item in scanned)
             {
                 if (records.TryGetValue(item.RelativePath, out var record))
-                { item.DetectionTag = record.DetectionTag; item.ResultTag = record.ResultTag; }
+                { item.DetectionTag = NormalizeTag(record.DetectionTag); item.ResultTag = NormalizeTag(record.ResultTag); }
                 item.PropertyChanged += ItemChanged;
                 Items.Add(item);
             }
@@ -124,6 +126,9 @@ public sealed class MainViewModel : ObservableObject
         ReplaceTags(DetectionTags, DetectionFilters, detection);
         ReplaceTags(ResultTags, ResultFilters, result);
     }
+    private static string NormalizeTag(string? tag) =>
+        string.IsNullOrWhiteSpace(tag) || string.Equals(tag, "NULL", StringComparison.OrdinalIgnoreCase)
+            ? "待定" : tag;
     private void ReplaceTags(ObservableCollection<string> tags, ObservableCollection<FilterOption> filters, IEnumerable<string> values)
     {
         foreach (var option in filters) option.PropertyChanged -= FilterChanged;
@@ -212,13 +217,27 @@ public sealed class MainViewModel : ObservableObject
     });
     private async Task ExportAsync()
     {
+        if (IsBusy) return;
+        if (Items.Count == 0)
+        {
+            Status = "请先打开包含图片的结果文件夹，再进行导出。";
+            MessageBox.Show(Status, "无法导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var selected = ItemsView.Cast<ReviewItem>().ToList();
+        if (selected.Count == 0)
+        {
+            Status = "当前过滤条件下没有图片，请调整左侧标签过滤。";
+            MessageBox.Show(Status, "无法导出", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         if (!ExportResult && !ExportOriginal) { Status = "请至少选择导出结果图或原图。"; return; }
         var dialog = new OpenFolderDialog { Title = "选择导出文件夹", Multiselect = false };
         if (dialog.ShowDialog() != true) return;
         IsBusy = true;
         try
         {
-            var count = await _exporter.ExportAsync(ItemsView.Cast<ReviewItem>().ToList(), dialog.FolderName, ExportResult, ExportOriginal);
+            var count = await _exporter.ExportAsync(selected, dialog.FolderName, ExportResult, ExportOriginal);
             Status = $"导出完成：{count} 个文件 → {dialog.FolderName}";
         }
         catch (Exception ex) { Status = "导出失败：" + ex.Message; }
