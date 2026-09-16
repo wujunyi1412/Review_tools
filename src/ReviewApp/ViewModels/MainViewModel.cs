@@ -83,6 +83,7 @@ public sealed class MainViewModel : ObservableObject
         foreach (var extension in new[] { ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" })
             ImageFormats.Add(new FilterOption { Name = extension });
         SetTags(DefaultDetectionTags);
+        UpdateStatistics();
     }
 
     private async Task OpenAsync()
@@ -203,8 +204,10 @@ public sealed class MainViewModel : ObservableObject
         var visibleCount = ItemsView.Cast<object>().Count();
         Raise(nameof(ImageCountSummary));
         Statistics.Clear();
-        Statistics.Add($"全部：{Items.Count}    当前过滤：{visibleCount}");
-        foreach (var group in Items.GroupBy(x => x.DetectionTag).OrderBy(x => x.Key)) Statistics.Add($"{group.Key}：{group.Count()}");
+        Statistics.Add($"全部：{Items.Count}");
+        Statistics.Add($"当前显示：{visibleCount}");
+        foreach (var tag in DetectionTags.Concat(Items.Select(x => x.DetectionTag)).Distinct(StringComparer.OrdinalIgnoreCase))
+            Statistics.Add($"{tag}：{Items.Count(x => x.DetectionTag.Equals(tag, StringComparison.OrdinalIgnoreCase))}");
     }
     private void Navigate(int delta)
     {

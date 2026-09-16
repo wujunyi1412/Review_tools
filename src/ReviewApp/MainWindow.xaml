@@ -61,48 +61,29 @@
     </Grid.RowDefinitions>
 
     <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrush}"
-            BorderThickness="0,0,0,1" Padding="18,12,18,14">
-      <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <DockPanel Margin="4,0,4,9">
-          <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="8"
-                  Background="{StaticResource PrimaryBrush}" Margin="0,0,10,0">
-            <TextBlock Text="✓" Foreground="White" FontSize="22" FontWeight="Bold"
+            BorderThickness="0,0,0,1" Padding="16,10">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+          <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource PrimaryBrush}" Margin="0,0,9,0">
+            <TextBlock Text="✓" Foreground="White" FontSize="21" FontWeight="Bold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
-          <StackPanel>
-            <TextBlock Text="图片复判工作台" FontSize="20" FontWeight="SemiBold"/>
-            <TextBlock Text="检测结果复核、标签统计与分类导出" Foreground="{StaticResource MutedTextBrush}" FontSize="12"/>
-          </StackPanel>
-        </DockPanel>
-
-        <Grid Grid.Row="1">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="3*"/><ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-          <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-
-          <TextBlock Text="结果目录" VerticalAlignment="Center" Margin="5" FontWeight="SemiBold"/>
-          <TextBox Grid.Column="1" Text="{Binding ResultFolder, UpdateSourceTrigger=PropertyChanged}"/>
-          <Button Grid.Column="2" Content="浏览..." Command="{Binding BrowseResultCommand}" MinWidth="76"/>
-          <TextBlock Grid.Column="3" Text="图片格式" VerticalAlignment="Center" Margin="18,5,5,5" FontWeight="SemiBold"/>
-          <ItemsControl Grid.Column="4" ItemsSource="{Binding ImageFormats}" VerticalAlignment="Center" Margin="4,0">
-            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <TextBlock Text="图片复判" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Border DockPanel.Dock="Left" Width="1" Background="{StaticResource BorderBrush}" Margin="0,1,16,1"/>
+        <TextBlock DockPanel.Dock="Left" Text="实时统计" FontSize="13" FontWeight="SemiBold"
+                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Statistics}" VerticalAlignment="Center">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate><DataTemplate>
-              <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="5,3"/>
+              <Border Background="#F0F5FC" CornerRadius="6" Margin="3,1" Padding="10,6">
+                <TextBlock Text="{Binding}" Foreground="#344054" FontSize="12"/>
+              </Border>
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
-          <Button Grid.Column="5" Grid.RowSpan="2" Content="打开文件夹" Command="{Binding OpenCommand}"
-                  Style="{StaticResource PrimaryButton}" MinWidth="112" Margin="10,4,4,4"/>
-
-          <TextBlock Grid.Row="1" Text="原图目录" VerticalAlignment="Center" Margin="5" FontWeight="SemiBold"/>
-          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OriginalFolder, UpdateSourceTrigger=PropertyChanged}"/>
-          <Button Grid.Row="1" Grid.Column="2" Content="浏览..." Command="{Binding BrowseOriginalCommand}" MinWidth="76"/>
-          <TextBlock Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Margin="18,5" VerticalAlignment="Center"
-                     Foreground="{StaticResource MutedTextBrush}" Text="可选，优先按相对路径匹配"/>
-        </Grid>
-      </Grid>
+        </ScrollViewer>
+      </DockPanel>
     </Border>
 
     <Grid Grid.Row="1" Margin="10">
@@ -116,9 +97,35 @@
 
       <Grid Grid.Column="0">
         <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/><RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <GroupBox Header="检出标签过滤">
+        <GroupBox Header="图片来源">
+          <StackPanel>
+            <TextBlock Text="结果目录" FontWeight="SemiBold" Margin="4,1,4,2"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBox Text="{Binding ResultFolder, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding ResultFolder}"/>
+              <Button Grid.Column="1" Content="浏览" Command="{Binding BrowseResultCommand}" Padding="9,7"/>
+            </Grid>
+            <TextBlock Text="原图目录（可选）" FontWeight="SemiBold" Margin="4,9,4,2"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBox Text="{Binding OriginalFolder, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding OriginalFolder}"/>
+              <Button Grid.Column="1" Content="浏览" Command="{Binding BrowseOriginalCommand}" Padding="9,7"/>
+            </Grid>
+            <TextBlock Text="图片格式" FontWeight="SemiBold" Margin="4,9,4,2"/>
+            <ItemsControl ItemsSource="{Binding ImageFormats}" Margin="1,0">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="5,3"/>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Content="打开文件夹" Command="{Binding OpenCommand}"
+                    Style="{StaticResource PrimaryButton}" Margin="4,10,4,2"/>
+          </StackPanel>
+        </GroupBox>
+        <GroupBox Grid.Row="1" Header="检出标签过滤">
           <ItemsControl ItemsSource="{Binding DetectionFilters}">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate><DataTemplate>
@@ -126,8 +133,8 @@
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
         </GroupBox>
-        <TextBlock Grid.Row="1" Text="{Binding ImageCountSummary}" FontSize="12" FontWeight="SemiBold" Margin="10,10,5,7"/>
-        <ListBox Grid.Row="2" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem}"
+        <TextBlock Grid.Row="2" Text="{Binding ImageCountSummary}" FontSize="12" FontWeight="SemiBold" Margin="10,10,5,7"/>
+        <ListBox Grid.Row="3" ItemsSource="{Binding ItemsView}" SelectedItem="{Binding SelectedItem}"
                  Margin="6" ScrollViewer.HorizontalScrollBarVisibility="Auto">
           <ListBox.ItemTemplate><DataTemplate>
             <Grid>
@@ -207,13 +214,6 @@
               <TextBox Text="{Binding NewDetectionTag, UpdateSourceTrigger=PropertyChanged}" ToolTip="新检出标签"/>
               <Button Grid.Column="1" Content="添加检出" Command="{Binding AddDetectionTagCommand}"/>
             </Grid>
-          </GroupBox>
-          <GroupBox Header="实时统计">
-            <ItemsControl ItemsSource="{Binding Statistics}">
-              <ItemsControl.ItemTemplate><DataTemplate>
-                <TextBlock Text="{Binding}" Margin="4,3" Foreground="#344054"/>
-              </DataTemplate></ItemsControl.ItemTemplate>
-            </ItemsControl>
           </GroupBox>
           <GroupBox Header="按当前过滤导出">
             <StackPanel>
