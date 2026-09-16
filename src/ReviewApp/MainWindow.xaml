@@ -63,11 +63,6 @@
     <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="0,0,0,1" Padding="16,10">
       <DockPanel LastChildFill="True">
-        <Border DockPanel.Dock="Right" Background="#F0F5FC" CornerRadius="6"
-                Padding="10,6" Margin="12,0,0,0" VerticalAlignment="Center">
-          <TextBlock Text="{Binding AppVersion}" Foreground="{StaticResource MutedTextBrush}"
-                     FontSize="12" FontWeight="SemiBold"/>
-        </Border>
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
           <Border Width="34" Height="34" CornerRadius="8" Background="{StaticResource PrimaryBrush}" Margin="0,0,9,0">
             <TextBlock Text="✓" Foreground="White" FontSize="21" FontWeight="Bold"

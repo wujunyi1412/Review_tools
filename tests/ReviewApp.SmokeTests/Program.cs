@@ -96,7 +96,7 @@ try
         var app = new ImageReviewTool.App();
         app.InitializeComponent();
         var window = new ImageReviewTool.MainWindow();
-        Check(window.Title == "图片复判工具", "main window XAML and icon load at startup");
+        Check(window.Title == "图片复判工具 v1.0.0", "window title shows version beside system icon");
         window.Close();
     });
 
