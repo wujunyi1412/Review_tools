@@ -115,15 +115,6 @@
         <Grid>
           <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
           <UniformGrid Columns="{Binding ViewerColumns}">
-            <Grid Margin="3">
-              <controls:ZoomImageView Source="{Binding ResultImage}" Viewport="{Binding Viewport}"/>
-              <Border VerticalAlignment="Top" HorizontalAlignment="Left" Background="#D92563EB"
-                      CornerRadius="0,0,7,0" Padding="11,6">
-                <TextBlock Text="结果图" Foreground="White" FontWeight="SemiBold"/>
-              </Border>
-              <TextBlock Text="未选择图片或图片无法读取" HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Foreground="#9AA7B5" Visibility="{Binding ResultImage, Converter={StaticResource NullVisibility}}"/>
-            </Grid>
             <Grid Margin="3" Visibility="{Binding HasOriginalFolder, Converter={StaticResource BoolVisibility}}">
               <controls:ZoomImageView Source="{Binding OriginalImage}" Viewport="{Binding Viewport}"/>
               <Border VerticalAlignment="Top" HorizontalAlignment="Left" Background="#D90F766E"
@@ -132,6 +123,15 @@
               </Border>
               <TextBlock Text="未匹配到原图" HorizontalAlignment="Center" VerticalAlignment="Center"
                          Foreground="#9AA7B5" Visibility="{Binding OriginalImage, Converter={StaticResource NullVisibility}}"/>
+            </Grid>
+            <Grid Margin="3">
+              <controls:ZoomImageView Source="{Binding ResultImage}" Viewport="{Binding Viewport}"/>
+              <Border VerticalAlignment="Top" HorizontalAlignment="Left" Background="#D92563EB"
+                      CornerRadius="0,0,7,0" Padding="11,6">
+                <TextBlock Text="结果图" Foreground="White" FontWeight="SemiBold"/>
+              </Border>
+              <TextBlock Text="未选择图片或图片无法读取" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Foreground="#9AA7B5" Visibility="{Binding ResultImage, Converter={StaticResource NullVisibility}}"/>
             </Grid>
           </UniformGrid>
           <Grid Grid.Row="1" Margin="3,8,3,1">
