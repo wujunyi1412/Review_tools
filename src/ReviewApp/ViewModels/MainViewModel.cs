@@ -45,6 +45,14 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ExportCommand { get; }
 
     public string ResultFolder { get => _resultFolder; set => Set(ref _resultFolder, value); }
+    public string AppVersion
+    {
+        get
+        {
+            var version = typeof(App).Assembly.GetName().Version;
+            return version is null ? "v未知" : $"v{version.Major}.{version.Minor}.{version.Build}";
+        }
+    }
     public string OriginalFolder
     {
         get => _originalFolder;

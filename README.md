@@ -2,6 +2,8 @@
 
 面向检测结果图片的 Windows 桌面复判软件。支持递归扫描、结果图/原图对照、同步缩放和平移、单套检出标签、实时统计、多选过滤、自动保存及分类导出。
 
+当前版本号显示在界面顶部右侧，统一由 `src/ReviewApp/ReviewApp.csproj` 的 `Version` 属性管理。
+
 ## 构建
 
 开发机要求：Windows、.NET 8 SDK、CMake 3.20+、Visual Studio 2022 C++ 工具链。

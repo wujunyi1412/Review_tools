@@ -7,6 +7,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>ImageReviewTool</AssemblyName>
     <RootNamespace>ImageReviewTool</RootNamespace>
+    <Version>1.0.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Assets\ReviewTool.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>

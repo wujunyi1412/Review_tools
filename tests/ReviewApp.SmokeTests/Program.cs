@@ -46,6 +46,7 @@ try
     RunSta(() =>
     {
         var viewModel = new MainViewModel();
+        Check(viewModel.AppVersion == "v1.0.0", "visible version matches assembly version");
         Check(viewModel.AutoAdvance, "automatic advance enabled by default");
         Check(viewModel.ImageFormats.Count(x => x.IsSelected) == 6, "image format checkbox defaults");
         Check(viewModel.ImageFormats.All(x => x.Name != ".gif"), "GIF is absent from image format options");
