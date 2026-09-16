@@ -63,9 +63,11 @@ try
         viewModel.AddReviewItem(first);
         viewModel.AddReviewItem(second);
         viewModel.SelectedItem = first;
+        Check(viewModel.ImageCountSummary.Contains("1 / 2"), "image list shows position within filtered images");
         viewModel.SelectDetectionTagCommand.Execute("漏检");
         Check(first.DetectionTag == "漏检" && ReferenceEquals(viewModel.SelectedItem, second),
             "one-click tagging advances to next image");
+        Check(viewModel.ImageCountSummary.Contains("2 / 2"), "image position follows automatic advance");
 
         viewModel.AutoAdvance = false;
         viewModel.SelectDetectionTagCommand.Execute("误检");
@@ -76,7 +78,8 @@ try
         viewModel.DetectionFilters.Single(x => x.Name == "误检").IsSelected = false;
         Check(viewModel.ItemsView.Cast<ReviewItem>().SequenceEqual([first])
               && ReferenceEquals(viewModel.SelectedItem, first)
-              && viewModel.ImageCountSummary.Contains("当前 1 / 全部 2"),
+              && viewModel.ImageCountSummary.Contains("1 / 1")
+              && viewModel.Statistics.Contains("当前过滤：1"),
             "filter checkbox immediately updates list, selection and count");
         viewModel.DetectionFilters.Single(x => x.Name == "漏检").IsSelected = false;
         Check(!viewModel.ItemsView.Cast<ReviewItem>().Any() && viewModel.SelectedItem is null,

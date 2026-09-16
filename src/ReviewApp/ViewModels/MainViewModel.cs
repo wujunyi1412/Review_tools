@@ -59,7 +59,15 @@ public sealed class MainViewModel : ObservableObject
     public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
     public bool HasOriginalFolder => Directory.Exists(OriginalFolder);
     public int ViewerColumns => HasOriginalFolder ? 2 : 1;
-    public string ImageCountSummary => $"图片列表 · 当前 {ItemsView.Cast<object>().Count()} / 全部 {Items.Count}";
+    public string ImageCountSummary
+    {
+        get
+        {
+            var visible = ItemsView.Cast<ReviewItem>().ToList();
+            var position = SelectedItem is null ? -1 : visible.IndexOf(SelectedItem);
+            return $"图片列表 · {position + 1} / {visible.Count}";
+        }
+    }
     public bool ExportResult { get => _exportResult; set => Set(ref _exportResult, value); }
     public bool ExportOriginal { get => _exportOriginal; set => Set(ref _exportOriginal, value); }
     public bool AutoAdvance { get => _autoAdvance; set => Set(ref _autoAdvance, value); }
@@ -68,7 +76,15 @@ public sealed class MainViewModel : ObservableObject
     public ReviewItem? SelectedItem
     {
         get => _selectedItem;
-        set { if (Set(ref _selectedItem, value)) { LoadSelectedImages(); Viewport.Reset(); } }
+        set
+        {
+            if (Set(ref _selectedItem, value))
+            {
+                LoadSelectedImages();
+                Viewport.Reset();
+                Raise(nameof(ImageCountSummary));
+            }
+        }
     }
 
     public MainViewModel()
@@ -234,7 +250,7 @@ public sealed class MainViewModel : ObservableObject
         if (previouslySelected is null || !ItemsView.Contains(previouslySelected))
             SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
         UpdateStatistics();
-        Status = $"过滤已更新：当前显示 {ItemsView.Cast<object>().Count()} / {Items.Count} 张图片";
+        Status = $"过滤已更新：当前过滤 {ItemsView.Cast<object>().Count()} 张（全部 {Items.Count} 张）";
     }
     private bool FilterItem(object value)
     {
@@ -253,7 +269,7 @@ public sealed class MainViewModel : ObservableObject
         Raise(nameof(ImageCountSummary));
         Statistics.Clear();
         Statistics.Add($"全部：{Items.Count}");
-        Statistics.Add($"当前显示：{visibleCount}");
+        Statistics.Add($"当前过滤：{visibleCount}");
         foreach (var tag in DetectionTags.Concat(Items.Select(x => x.DetectionTag)).Distinct(StringComparer.OrdinalIgnoreCase))
             Statistics.Add($"{tag}：{Items.Count(x => x.DetectionTag.Equals(tag, StringComparison.OrdinalIgnoreCase))}");
     }
