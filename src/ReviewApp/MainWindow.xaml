@@ -208,12 +208,26 @@
               <CheckBox Content="标注后自动跳转到下一张" IsChecked="{Binding AutoAdvance}" Margin="5,10,5,2"/>
             </StackPanel>
           </GroupBox>
-          <GroupBox Header="新增标签">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <TextBox Text="{Binding NewDetectionTag, UpdateSourceTrigger=PropertyChanged}" ToolTip="新检出标签"/>
-              <Button Grid.Column="1" Content="添加检出" Command="{Binding AddDetectionTagCommand}"/>
-            </Grid>
+          <GroupBox Header="自定义标签">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBox Text="{Binding NewDetectionTag, UpdateSourceTrigger=PropertyChanged}" ToolTip="新检出标签"/>
+                <Button Grid.Column="1" Content="添加" Command="{Binding AddDetectionTagCommand}"/>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding CustomDetectionTags}" Margin="2,7,2,0">
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <DockPanel Margin="2,2">
+                    <Button DockPanel.Dock="Right" Content="删除" Padding="8,3" Margin="4,0,0,0"
+                            Command="{Binding DataContext.DeleteDetectionTagCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"/>
+                    <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                  </DockPanel>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="未打开目录时，新增标签仅保存在内存中。"
+                         Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="4,7,4,0" TextWrapping="Wrap"/>
+            </StackPanel>
           </GroupBox>
           <GroupBox Header="按当前过滤导出">
             <StackPanel>

@@ -22,12 +22,14 @@ public sealed class MainViewModel : ObservableObject
     private ReviewItem? _selectedItem;
     private BitmapImage? _resultImage, _originalImage;
     private bool _isBusy, _exportResult = true, _exportOriginal = true, _autoAdvance = true;
+    private bool _updatingTags;
     private CancellationTokenSource? _saveDebounce;
 
     public ObservableCollection<ReviewItem> Items { get; } = [];
     public ObservableCollection<FilterOption> ImageFormats { get; } = [];
     public ICollectionView ItemsView { get; }
     public ObservableCollection<string> DetectionTags { get; } = [];
+    public ObservableCollection<string> CustomDetectionTags { get; } = [];
     public ObservableCollection<FilterOption> DetectionFilters { get; } = [];
     public ObservableCollection<string> Statistics { get; } = [];
     public ViewportState Viewport { get; } = new();
@@ -36,6 +38,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand BrowseOriginalCommand { get; }
     public RelayCommand OpenCommand { get; }
     public RelayCommand AddDetectionTagCommand { get; }
+    public RelayCommand DeleteDetectionTagCommand { get; }
     public RelayCommand SelectDetectionTagCommand { get; }
     public RelayCommand PreviousCommand { get; }
     public RelayCommand NextCommand { get; }
@@ -75,7 +78,8 @@ public sealed class MainViewModel : ObservableObject
         BrowseResultCommand = new(_ => PickFolder(path => ResultFolder = path));
         BrowseOriginalCommand = new(_ => PickFolder(path => { OriginalFolder = path; Raise(nameof(HasOriginalFolder)); }));
         OpenCommand = new(async _ => await OpenAsync(), _ => !IsBusy);
-        AddDetectionTagCommand = new(_ => AddTag(NewDetectionTag, DetectionTags, DetectionFilters, () => NewDetectionTag = ""));
+        AddDetectionTagCommand = new(_ => AddTag(NewDetectionTag));
+        DeleteDetectionTagCommand = new(tag => DeleteTag(tag as string));
         SelectDetectionTagCommand = new(tag => SelectDetectionTag(tag as string));
         PreviousCommand = new(_ => Navigate(-1));
         NextCommand = new(_ => Navigate(1));
@@ -98,7 +102,9 @@ public sealed class MainViewModel : ObservableObject
             if (!string.IsNullOrEmpty(_loadedResultFolder)) await SaveAsync();
             var targetRoot = ResultFolder;
             var database = await _store.LoadAsync(targetRoot);
-            SetTags(DefaultDetectionTags.Concat(database.DetectionTags.Select(NormalizeTag)));
+            var pendingTags = string.IsNullOrEmpty(_loadedResultFolder)
+                ? CustomDetectionTags.ToArray() : [];
+            SetTags(DefaultDetectionTags.Concat(database.DetectionTags.Select(NormalizeTag)).Concat(pendingTags));
             var records = database.Items.ToDictionary(x => x.RelativePath, StringComparer.OrdinalIgnoreCase);
             var scanned = await _scanner.ScanAsync(targetRoot,
                 Directory.Exists(OriginalFolder) ? OriginalFolder : null,
@@ -115,6 +121,7 @@ public sealed class MainViewModel : ObservableObject
             _loadedResultFolder = targetRoot;
             SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
             UpdateStatistics();
+            if (pendingTags.Length > 0) QueueSave();
             Raise(nameof(HasOriginalFolder));
             Raise(nameof(ViewerColumns));
             Status = $"已载入 {Items.Count} 张结果图，匹配原图 {Items.Count(x => x.OriginalPath is not null)} 张";
@@ -126,6 +133,7 @@ public sealed class MainViewModel : ObservableObject
     private void SetTags(IEnumerable<string> detection)
     {
         ReplaceTags(DetectionTags, DetectionFilters, detection);
+        SyncCustomTags();
     }
     public void AddReviewItem(ReviewItem item)
     {
@@ -147,15 +155,54 @@ public sealed class MainViewModel : ObservableObject
             filters.Add(option);
         }
     }
-    private void AddTag(string value, ObservableCollection<string> tags, ObservableCollection<FilterOption> filters, Action clear)
+    private void AddTag(string value)
     {
         value = value.Trim();
-        if (value.Length == 0 || tags.Contains(value, StringComparer.OrdinalIgnoreCase)) return;
-        tags.Insert(tags.Count > 0 ? tags.Count - 1 : 0, value);
+        if (value.Length == 0 || DetectionTags.Contains(value, StringComparer.OrdinalIgnoreCase)) return;
+        DetectionTags.Insert(DetectionTags.Count > 0 ? DetectionTags.Count - 1 : 0, value);
         var option = new FilterOption { Name = value };
         option.PropertyChanged += FilterChanged;
-        filters.Insert(filters.Count > 0 ? filters.Count - 1 : 0, option);
-        clear(); QueueSave(); UpdateStatistics();
+        DetectionFilters.Insert(DetectionFilters.Count > 0 ? DetectionFilters.Count - 1 : 0, option);
+        NewDetectionTag = "";
+        SyncCustomTags();
+        QueueSave(); UpdateStatistics();
+    }
+    private void DeleteTag(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || DefaultDetectionTags.Contains(tag, StringComparer.OrdinalIgnoreCase)) return;
+        var actual = DetectionTags.FirstOrDefault(x => x.Equals(tag, StringComparison.OrdinalIgnoreCase));
+        if (actual is null) return;
+        var affected = Items.Where(x => x.DetectionTag.Equals(actual, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (affected.Count > 0)
+        {
+            var answer = MessageBox.Show(
+                $"“{actual}”已用于 {affected.Count} 张图片。删除后这些图片会改为“待定”，确定删除吗？",
+                "删除自定义标签", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+        }
+        _updatingTags = true;
+        try { foreach (var item in affected) item.DetectionTag = "待定"; }
+        finally { _updatingTags = false; }
+        DetectionTags.Remove(actual);
+        var option = DetectionFilters.FirstOrDefault(x => x.Name.Equals(actual, StringComparison.OrdinalIgnoreCase));
+        if (option is not null)
+        {
+            option.PropertyChanged -= FilterChanged;
+            DetectionFilters.Remove(option);
+        }
+        SyncCustomTags();
+        ItemsView.Refresh();
+        if (SelectedItem is null || !ItemsView.Contains(SelectedItem))
+            SelectedItem = ItemsView.Cast<ReviewItem>().FirstOrDefault();
+        UpdateStatistics();
+        QueueSave();
+        Status = $"已删除标签“{actual}”" + (affected.Count > 0 ? $"，{affected.Count} 张图片改为“待定”。" : "。");
+    }
+    private void SyncCustomTags()
+    {
+        CustomDetectionTags.Clear();
+        foreach (var tag in DetectionTags.Except(DefaultDetectionTags, StringComparer.OrdinalIgnoreCase))
+            CustomDetectionTags.Add(tag);
     }
     private void SelectDetectionTag(string? tag)
     {
@@ -196,6 +243,7 @@ public sealed class MainViewModel : ObservableObject
     }
     private void ItemChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (_updatingTags) return;
         if (e.PropertyName is nameof(ReviewItem.DetectionTag))
         { ItemsView.Refresh(); UpdateStatistics(); QueueSave(); }
     }

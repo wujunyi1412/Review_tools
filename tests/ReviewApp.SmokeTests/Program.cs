@@ -49,6 +49,15 @@ try
         Check(viewModel.AutoAdvance, "automatic advance enabled by default");
         Check(viewModel.ImageFormats.Count(x => x.IsSelected) == 6, "image format checkbox defaults");
         Check(viewModel.ImageFormats.All(x => x.Name != ".gif"), "GIF is absent from image format options");
+        viewModel.NewDetectionTag = "临时标签";
+        viewModel.AddDetectionTagCommand.Execute(null);
+        Check(viewModel.CustomDetectionTags.Contains("临时标签") && viewModel.DetectionTags.Contains("临时标签"),
+            "custom tag can be added before opening a folder");
+        viewModel.DeleteDetectionTagCommand.Execute("临时标签");
+        Check(!viewModel.CustomDetectionTags.Contains("临时标签") && !viewModel.DetectionTags.Contains("临时标签"),
+            "unused custom tag can be deleted");
+        viewModel.DeleteDetectionTagCommand.Execute("待定");
+        Check(viewModel.DetectionTags.Contains("待定"), "built-in tag cannot be deleted");
         var first = new ReviewItem { RelativePath = "first.png", ResultPath = Path.Combine(sandbox, "missing-first.png") };
         var second = new ReviewItem { RelativePath = "second.png", ResultPath = Path.Combine(sandbox, "missing-second.png") };
         viewModel.AddReviewItem(first);
